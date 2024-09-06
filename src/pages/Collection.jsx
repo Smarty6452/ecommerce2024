@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useCallback } from "react";
 import { ShopContext } from "../context/ShopContext";
 import { assets } from "../assets/frontend_assets/assets";
 import Title from "../components/Title";
@@ -10,9 +10,10 @@ const Collection = () => {
   const [filterProducts, setFilterProducts] = useState([]);
   const [category, setCategory] = useState([]);
   const [subCategory, setSubCategory] = useState([]);
+  const [sortType, setSortType] = useState('relevant');
 
-  // Effect to update filtered products based on selected categories and subcategories
-  useEffect(() => {
+  // Function to filter products based on selected categories and subcategories
+  const filterProductsList = useCallback(() => {
     let filtered = products;
 
     if (category.length > 0) {
@@ -23,13 +24,37 @@ const Collection = () => {
       filtered = filtered.filter(product => subCategory.includes(product.subCategory));
     }
 
-    setFilterProducts(filtered);
+    return filtered;
   }, [category, subCategory, products]);
+
+  // Effect to update filtered products based on selected categories and subcategories
+  useEffect(() => {
+    setFilterProducts(filterProductsList());
+  }, [filterProductsList]);
+
+  // Function to sort products
+  const sortProductList = useCallback((products) => {
+    const sorted = [...products];
+
+    switch (sortType) {
+      case 'low-high':
+        return sorted.sort((a, b) => a.price - b.price);
+      case 'high-low':
+        return sorted.sort((a, b) => b.price - a.price);
+      default:
+        return sorted;
+    }
+  }, [sortType]);
+
+  // Effect to sort products when sortType changes
+  useEffect(() => {
+    setFilterProducts(sortProductList(filterProductsList()));
+  }, [sortType, filterProductsList, sortProductList]);
 
   // Handle category checkbox change
   const handleCategoryChange = (e) => {
     const value = e.target.value;
-    setCategory(prev => 
+    setCategory(prev =>
       prev.includes(value) ? prev.filter(item => item !== value) : [...prev, value]
     );
   };
@@ -37,7 +62,7 @@ const Collection = () => {
   // Handle subcategory checkbox change
   const handleSubCategoryChange = (e) => {
     const value = e.target.value;
-    setSubCategory(prev => 
+    setSubCategory(prev =>
       prev.includes(value) ? prev.filter(item => item !== value) : [...prev, value]
     );
   };
@@ -49,10 +74,8 @@ const Collection = () => {
     <div className="flex flex-col sm:flex-row gap-4 sm:gap-10 pt-10 border-t">
       {/* Left section for filter */}
       <div className="min-w-[240px] sm:min-w-[300px]">
-        {/* Filter heading is always visible */}
         <div className="flex items-center gap-2 mb-4">
           <p className="text-xl font-semibold">FILTERS</p>
-          {/* Only show the toggle icon on screens smaller than 'sm' */}
           <img
             src={assets.dropdown_icon}
             alt="dropdown icon"
@@ -105,16 +128,15 @@ const Collection = () => {
           <Title text1={"ALL"} text2={"COLLECTIONS"} />
 
           {/* Product sort */}
-          <select className="border text-sm border-gray-300 px-2">
+          <select onChange={(e) => setSortType(e.target.value)} className="border text-sm border-gray-300 px-2">
             <option value="relevant">Sort by Relevant</option>
-            <option value="low">Sort by: High to Low</option>
-            <option value="high">Sort by: Low to High</option>
+            <option value="low-high">Sort by: Low to High</option>
+            <option value="high-low">Sort by: High to Low</option>
           </select>
         </div>
 
         {/* Product Listings */}
-        <div className="grid grid-cols-2 md:grid-cols-3 
-        lg:grid-cols-4 gap-4 gap-y-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 gap-y-6">
           {filterProducts.map((item, index) => (
             <ProductItem
               key={index}
